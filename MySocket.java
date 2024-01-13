@@ -30,9 +30,8 @@ public class MySocket extends Socket {
     }
 
     // Constructor que crea un socket amb un nick i definint a qui es vol conectar
-    public MySocket(String nick, String host, int port) throws IOException {
+    public MySocket(String host, int port) throws IOException {
         try {
-            this.nick = nick;
             this.port = port;
             sc = new Socket(host, port);
             this.read = new BufferedReader(new InputStreamReader(sc.getInputStream()));

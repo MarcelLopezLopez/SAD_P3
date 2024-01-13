@@ -8,8 +8,7 @@ public class MyServerSocket extends ServerSocket {
 
     // Crea un socket de servidor, vinculado al puerto especificado.
     public MyServerSocket(int port) throws IOException {
-        super(port);
-        this.ss = this;
+        this.ss = new ServerSocket(port);
         this.connect = true;
     }
 
@@ -32,7 +31,7 @@ public class MyServerSocket extends ServerSocket {
     public MySocket accept() {
         try {
             if(connect){
-            return new MySocket(super.accept());
+            return new MySocket(ss.accept());
             } else {
                 return null;
             }

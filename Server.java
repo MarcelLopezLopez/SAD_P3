@@ -1,90 +1,58 @@
 import java.io.IOException;
-import java.security.cert.CRLException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Handler;
+
+// Para ejectuar el servidor se debe hacer de la siguiente manera:
+// >> java Server 
 
 public class Server {
     // Port on s'executarà en servidor
     private static final int PORT = 8080;
     // Diccionari de clients pel seu nick i el seu socket
     private static Map<String, MySocket> clientDictionary = new ConcurrentHashMap<>();
-    // Variable boolean per verificar que no hi hagi noms repetits
-    public static boolean nomValid = false;
     public MySocket mySocket;
-    public String name;
 
-    public Server(String name, MySocket mySocket){
-        this.mySocket = mySocket;
-        this.name = name;
-    }
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
 
         MyServerSocket myServerSocket = null;
 
-        try {
-            myServerSocket = new MyServerSocket(PORT);
+        myServerSocket = new MyServerSocket(PORT);
+        System.out.println("Server STARTED!!!");
 
-            while (true) {
-                // Esperem la següent conexió del client
-                MySocket client = myServerSocket.accept();
-                // Demanem al client que introdueixi un nom i validem si ja existeix
-                while (client != null){
-                    handleClient(client);
+        while (true) {
+            // Esperem la següent conexió del client
+            MySocket client = myServerSocket.accept();
+            client.printLine("Connected to Server!!!");
+
+            new Thread() {
+                public void run() {
+                    client.printLine("Introduce your UserName: ");
+                    String name = client.readLine();
+                    client.printLine("Hi " + name + ", you are now in chat!");
+                    clientDictionary.put(name, client);
+                    String text;
+                    while ((text = client.readLine()) != null) {
+                        broadcast(text, name);
+                        System.out.println(name + " says: " + text);
+
+                    }
+                    System.out.println(name + " has left the chat");
+                    clientDictionary.remove(name);
+                    client.close();
                 }
-            }
-
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        } finally {
-            if (myServerSocket != null) {
-                myServerSocket.close();
-            }
+            }.start();
         }
     }
 
-    private static void handleClient(MySocket client) {
-        new Thread(() -> {
-            String name = null;
+    public static void broadcast(String message, String name) {
+        MySocket client = clientDictionary.get(name);
 
-            try {
-                while (!nomValid) {
-                    client.printLine("Introdueixi el seu nom d'usuari: ");
-                    String line = client.readLine();
-
-                    if (clientDictionary.containsKey(line)) {
-                        client.printLine("El nom d'usuari " + line + " ja està sent utilitzat");
-                    } else {
-                        clientDictionary.put(line, client);
-                        name = line;
-                        nomValid = true;
-
-                        client.printLine("Hola " + name + " benvingut, t'has unit correctament al xat");
-                        System.out.println(name + " s'ha unit al xat");
-                    }
-                }
-
-                nomValid = false;
-
-                while (true) {
-                    String message = client.readLine();
-                    if (message == null) {
-                        break; // Si el cliente cierra la conexión
-                    }
-
-                    // Procesar el mensaje del cliente o realizar alguna acción
-                    System.out.println(name + ": " + message);
-
-                    // Puedes enviar mensajes de vuelta al cliente si es necesario
-                    // client.printLine("Respuesta al cliente");
-                }
-
-            } finally {
-                // Cerrar el socket del cliente y eliminarlo del diccionario al salir
-                client.close();
-                clientDictionary.remove(name);
+        for (Map.Entry<String, MySocket> entry : clientDictionary.entrySet()) {
+            String actualUser = entry.getKey();
+            MySocket socketActual = entry.getValue();
+            if (actualUser != name) {
+                socketActual.printLine(name + "> " + message);
             }
-        }).start();
+        }
     }
-
 }
