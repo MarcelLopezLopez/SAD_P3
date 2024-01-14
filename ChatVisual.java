@@ -3,8 +3,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.io.IOException;
 import javax.swing.*;
+import javax.swing.text.*;
+import java.io.IOException;
 
 public class ChatVisual {
     private static JTextPane input;
@@ -12,7 +13,7 @@ public class ChatVisual {
     private static JTextField userTextField;
     private static JFrame startChat;
     private static JFrame principal;
-    private static JTextArea messages;
+    private static JTextPane messages;
     private DefaultListModel<String> model;
     private JList<String> userList;
     private static MySocket socket;
@@ -20,8 +21,7 @@ public class ChatVisual {
     private String message_user;
     private JTextField textField;
 
-    public ChatVisual() throws IOException {
-        super();
+    public ChatVisual() throws IOException  {
         socket = new MySocket("localhost", 8080);
         model = new DefaultListModel<>();
         userList = new JList<>(model);
@@ -32,7 +32,7 @@ public class ChatVisual {
             try {
                 ChatVisual chat = new ChatVisual();
                 chat.iniciXat();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         });
@@ -62,7 +62,7 @@ public class ChatVisual {
 
         startChat.add(enterUsername, BorderLayout.PAGE_END);
 
-        startChat.setSize(400, 500);
+        startChat.setSize(400, 150);
         startChat.setLocationRelativeTo(null);
         startChat.setResizable(false);
         startChat.setVisible(true);
@@ -82,20 +82,10 @@ public class ChatVisual {
             }
         });
 
-        messages = new JTextArea(20, 30);
-        JPanel output = new JPanel();
-        output.setLayout(new BoxLayout(output, BoxLayout.PAGE_AXIS));
+        messages = new JTextPane();
         messages.setEditable(false);
-        output.add(new JScrollPane(messages));
-
-        JLabel usersLabel = new JLabel("Users available");
-        output.add(usersLabel);
-
-        userList.setBackground(new Color(0, 255, 0));
-        JScrollPane scrollPane = new JScrollPane(userList);
-        scrollPane.setMaximumSize(new Dimension(scrollPane.getMaximumSize().width, scrollPane.getMinimumSize().height));
-        output.add(scrollPane);
-        output.add(new JScrollPane(messages));
+        JScrollPane scrollPane = new JScrollPane(messages);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
 
         input = new JTextPane();
         input.setLayout(new BoxLayout(input, BoxLayout.LINE_AXIS));
@@ -107,7 +97,7 @@ public class ChatVisual {
         input.add(button_send);
         input.setMaximumSize(new Dimension(input.getMaximumSize().width, input.getMinimumSize().height));
 
-        principal.add(output);
+        principal.add(scrollPane);
         principal.add(input);
 
         principal.setSize(400, 500);
@@ -121,10 +111,21 @@ public class ChatVisual {
             message_user = textField.getText();
             if (message_user.length() >= 1) {
                 textField.setText("");
+                appendMessage(username + ": " + message_user + "\n", Color.GREEN);
                 socket.printLine(message_user);
-                messages.append(username + ": " + message_user + "\n");
             }
             textField.requestFocusInWindow();
+        }
+    }
+
+    private void appendMessage(String message, Color color) {
+        StyledDocument doc = messages.getStyledDocument();
+        Style style = doc.addStyle("Style", null);
+        StyleConstants.setForeground(style, color);
+        try {
+            doc.insertString(doc.getLength(), message, style);
+        } catch (BadLocationException ex) {
+            ex.printStackTrace();
         }
     }
 
@@ -165,8 +166,7 @@ public class ChatVisual {
             String line;
             try {
                 while ((line = socket.readLine()) != null) {
-                    messages.append(line + " \n");
-
+                    appendMessage(line + "\n", Color.RED);
                     if (line.contains("Exit")) {
                         updateUserList(line);
                     } else {
